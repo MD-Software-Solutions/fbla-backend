@@ -19,7 +19,7 @@ console.log(process.env.DB_NAME);
 // Middleware to parse JSON data
 app.use(bodyParser.json());
 
-const pool = mysql.createConnection({ host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, connectTimeout: 10000 // Set a reasonable timeout }); 
+const pool = mysql.createConnection({ host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, connectTimeout: 10000 }); 
     
 pool.connect((err) => { if (err) { console.error('Direct connection failed:', err); } else { console.log('Direct connection to the database successful.'); connection.end(); } });
 
