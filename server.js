@@ -13,7 +13,7 @@ require('dotenv').config();
 
 app.use(cors());
 
-console.log(process.env.DB_NAME);
+console.log(process.env.DB_HOST);
 
 
 // Middleware to parse JSON data
