@@ -40,6 +40,10 @@ pool.getConnection((err, connection) => {
   }
 });
 
+app.get('/', (req, res) => {
+    console.log(process.env.DB_NAME);
+});
+
 
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
