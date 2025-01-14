@@ -19,27 +19,31 @@ console.log(process.env.DB_NAME);
 // Middleware to parse JSON data
 app.use(bodyParser.json());
 
-// MySQL connection to AWS RDS
-const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    waitForConnections: true,
-    connectionLimit: 10,  
-    queueLimit: 0,
-    connectTimeout: 1000000
-  });
+const pool = mysql.createConnection({ host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, connectTimeout: 10000 // Set a reasonable timeout }); 
+    
+pool.connect((err) => { if (err) { console.error('Direct connection failed:', err); } else { console.log('Direct connection to the database successful.'); connection.end(); } });
 
-// Test database connection
-pool.getConnection((err, connection) => {
-  if (err) {
-    console.error('Database connection failed:', err);
-  } else {
-    console.log('Connected to the database.');
-    connection.release();
-  }
-});
+// MySQL connection to AWS RDS
+// const pool = mysql.createPool({
+//     host: process.env.DB_HOST,
+//     user: process.env.DB_USER,
+//     password: process.env.DB_PASSWORD,
+//     database: process.env.DB_NAME,
+//     waitForConnections: true,
+//     connectionLimit: 10,  
+//     queueLimit: 0,
+//     connectTimeout: 1000000
+//   });
+
+// // Test database connection
+// pool.getConnection((err, connection) => {
+//   if (err) {
+//     console.error('Database connection failed:', err);
+//   } else {
+//     console.log('Connected to the database.');
+//     connection.release();
+//   }
+// });
 
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
