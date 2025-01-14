@@ -13,6 +13,7 @@ require('dotenv').config();
 
 app.use(cors());
 
+console.log(process.env.DB_NAME);
 
 
 // Middleware to parse JSON data
@@ -39,11 +40,6 @@ pool.getConnection((err, connection) => {
     connection.release();
   }
 });
-
-app.get('/', (req, res) => {
-    console.log(process.env.DB_NAME);
-});
-
 
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
