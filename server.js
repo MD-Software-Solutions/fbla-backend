@@ -4,12 +4,13 @@ const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');  // Import CORS module
+require('dotenv').config();
 
 
 // Create an express app
 const app = express();
-const port = 3000;
-require('dotenv').config();
+const port = 4000;
+
 
 app.use(cors());
 
@@ -20,10 +21,11 @@ app.use(bodyParser.json());
 
 // MySQL connection to AWS RDS
 const pool = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST, 
+    user: process.env.DB_USER, 
+    password: process.env.DB_PASSWORD, 
     database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
     waitForConnections: true,
     connectionLimit: 10,  
     queueLimit: 0
@@ -38,6 +40,7 @@ pool.getConnection((err, connection) => {
     connection.release();
   }
 });
+
 
 
 // Get all users' usernames and passwords
