@@ -4,46 +4,44 @@ const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');  // Import CORS module
+require('dotenv').config();
 
 
 // Create an express app
 const app = express();
-const port = 3000;
-require('dotenv').config();
+const port = 4000;
+
 
 app.use(cors());
 
-console.log(process.env.DB_HOST);
 
 
 // Middleware to parse JSON data
 app.use(bodyParser.json());
 
-const pool = mysql.createConnection({ host: process.env.DB_HOST, user: process.env.DB_USER, password: process.env.DB_PASSWORD, database: process.env.DB_NAME, connectTimeout: 10000 }); 
-    
-pool.connect((err) => { if (err) { console.error('Direct connection failed:', err); } else { console.log('Direct connection to the database successful.'); connection.end(); } });
-
 // MySQL connection to AWS RDS
-// const pool = mysql.createPool({
-//     host: process.env.DB_HOST,
-//     user: process.env.DB_USER,
-//     password: process.env.DB_PASSWORD,
-//     database: process.env.DB_NAME,
-//     waitForConnections: true,
-//     connectionLimit: 10,  
-//     queueLimit: 0,
-//     connectTimeout: 1000000
-//   });
+const pool = mysql.createPool({
+    host: process.env.DB_HOST, 
+    user: process.env.DB_USER, 
+    password: process.env.DB_PASSWORD, 
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT,
+    waitForConnections: true,
+    connectionLimit: 10,  
+    queueLimit: 0
+  });
 
-// // Test database connection
-// pool.getConnection((err, connection) => {
-//   if (err) {
-//     console.error('Database connection failed:', err);
-//   } else {
-//     console.log('Connected to the database.');
-//     connection.release();
-//   }
-// });
+// Test database connection
+pool.getConnection((err, connection) => {
+  if (err) {
+    console.error('Database connection failed:', err);
+  } else {
+    console.log('Connected to the database.');
+    connection.release();
+  }
+});
+
+
 
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
