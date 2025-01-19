@@ -41,6 +41,31 @@ pool.getConnection((err, connection) => {
   }
 });
 
+app.get('/sign-in', async (req, res) => {
+  const { username, password } = req.query; 
+  console.log(username, password);
+  const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
+  const verify = async (pword) => {
+    console.log(pword)
+    const isMatch = await bcrypt.compare(password, pword);
+    console.log(isMatch);
+    if (isMatch) {
+      console.log("You did it papi")
+      res.status(200).json("Its all good")
+    }
+  }
+  pool.query(query, (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json({error: err})
+
+    }
+    else if (results.length > 0) {
+      verify(results[0]["password_hash"]);
+    }
+  })
+});
+
+
 
 
 // Get all users' usernames and passwords
