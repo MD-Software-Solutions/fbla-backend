@@ -65,6 +65,18 @@ app.get('/sign-in', async (req, res) => {
   })
 });
 
+app.get('/get-user', async (req, res) => {
+  const { username } = req.query;
+  const query = `SELECT * FROM users WHERE account_username = '${username}';`
+  pool.query(query, (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json("No username")
+    } else {
+      res.status(200).json(results)
+    }
+  })
+});
+
 
 
 
@@ -156,11 +168,11 @@ app.delete('/users/:user_id', (req, res) => {
 
 // Create a new job posting
 app.post('/job_postings', (req, res) => {
-  const { user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag } = req.body;
+  const { user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar } = req.body;
 
-  const query = `INSERT INTO job_postings (user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag) 
-                 VALUES (?, ?, ?, ?, ?, ?)`;
-  pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag], (err, result) => {
+  const query = `INSERT INTO job_postings (user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar], (err, result) => {
     if (err) {
       res.status(500).json({ error: err });
     } else {
