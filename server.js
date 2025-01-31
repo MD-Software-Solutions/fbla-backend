@@ -41,6 +41,43 @@ pool.getConnection((err, connection) => {
   }
 });
 
+app.get('/sign-in', async (req, res) => {
+  const { username, password } = req.query; 
+  console.log(username, password);
+  const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
+  const verify = async (pword) => {
+    console.log(pword)
+    const isMatch = await bcrypt.compare(password, pword);
+    console.log(isMatch);
+    if (isMatch) {
+      console.log("You did it papi")
+      res.status(200).json("Its all good")
+    }
+  }
+  pool.query(query, (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json({error: err})
+
+    }
+    else if (results.length > 0) {
+      verify(results[0]["password_hash"]);
+    }
+  })
+});
+
+app.get('/get-user', async (req, res) => {
+  const { username } = req.query;
+  const query = `SELECT * FROM users WHERE account_username = '${username}';`
+  pool.query(query, (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json("No username")
+    } else {
+      res.status(200).json(results)
+    }
+  })
+});
+
+
 
 
 // Get all users' usernames and passwords
@@ -131,11 +168,11 @@ app.delete('/users/:user_id', (req, res) => {
 
 // Create a new job posting
 app.post('/job_postings', (req, res) => {
-  const { user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag } = req.body;
+  const { user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar } = req.body;
 
-  const query = `INSERT INTO job_postings (user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag) 
-                 VALUES (?, ?, ?, ?, ?, ?)`;
-  pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag], (err, result) => {
+  const query = `INSERT INTO job_postings (user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar) 
+                 VALUES (?, ?, ?, ?, ?, ?, ?)`;
+  pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar], (err, result) => {
     if (err) {
       res.status(500).json({ error: err });
     } else {
@@ -217,6 +254,23 @@ app.get('/user_history', (req, res) => {
   });
 });
 
+// Delete user's History 
+app.delete('/user_history/:history_id', (req, res) => {
+  const { job_id } = req.params;
+
+  const query = 'DELETE FROM user_history WHERE history_id = ?';
+  pool.query(query, [history_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'History data not found' });
+    } else {
+      res.status(200).json({ message: 'History Data deleted successfully' });
+    }
+  });
+});
+
+
 // ----- User Skills CRUD Operations -----
 
 // Create a new skill entry for a user
@@ -241,6 +295,22 @@ app.get('/user_skills', (req, res) => {
       res.status(500).json({ error: err });
     } else {
       res.status(200).json(results);
+    }
+  });
+});
+
+// Delete user's Skill 
+app.delete('/user_skills/:skill_id', (req, res) => {
+  const { skill_id } = req.params;
+
+  const query = 'DELETE FROM user_skills WHERE skill_id = ?';
+  pool.query(query, [skill_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Skill data not found' });
+    } else {
+      res.status(200).json({ message: 'Skill Data deleted successfully' });
     }
   });
 });
@@ -273,6 +343,22 @@ app.get('/user_projects', (req, res) => {
   });
 });
 
+// Delete user's Project 
+app.delete('/user_projects/:project_id', (req, res) => {
+  const { project_id } = req.params;
+
+  const query = 'DELETE FROM user_projects WHERE project_id = ?';
+  pool.query(query, [project_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Project data not found' });
+    } else {
+      res.status(200).json({ message: 'Project Data deleted successfully' });
+    }
+  });
+});
+
 // ----- User Achievements CRUD Operations -----
 
 // Create a new achievement entry for a user
@@ -297,6 +383,22 @@ app.get('/user_achievements', (req, res) => {
       res.status(500).json({ error: err });
     } else {
       res.status(200).json(results);
+    }
+  });
+});
+
+// Delete user's Achievement 
+app.delete('/user_achievements/:achievement_id', (req, res) => {
+  const { achievement_id } = req.params;
+
+  const query = 'DELETE FROM user_achievements WHERE achievement_id = ?';
+  pool.query(query, [achievement_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Achievement data not found' });
+    } else {
+      res.status(200).json({ message: 'Achievement Data deleted successfully' });
     }
   });
 });
