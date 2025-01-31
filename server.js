@@ -255,6 +255,23 @@ app.get('/user_history', (req, res) => {
   });
 });
 
+// Delete user's History 
+app.delete('/user_history/:history_id', (req, res) => {
+  const { job_id } = req.params;
+
+  const query = 'DELETE FROM user_history WHERE history_id = ?';
+  pool.query(query, [history_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'History data not found' });
+    } else {
+      res.status(200).json({ message: 'History Data deleted successfully' });
+    }
+  });
+});
+
+
 // ----- User Skills CRUD Operations -----
 
 // Create a new skill entry for a user
@@ -279,6 +296,22 @@ app.get('/user_skills', (req, res) => {
       res.status(500).json({ error: err });
     } else {
       res.status(200).json(results);
+    }
+  });
+});
+
+// Delete user's Skill 
+app.delete('/user_skills/:skill_id', (req, res) => {
+  const { skill_id } = req.params;
+
+  const query = 'DELETE FROM user_skills WHERE skill_id = ?';
+  pool.query(query, [skill_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Skill data not found' });
+    } else {
+      res.status(200).json({ message: 'Skill Data deleted successfully' });
     }
   });
 });
@@ -311,6 +344,22 @@ app.get('/user_projects', (req, res) => {
   });
 });
 
+// Delete user's Project 
+app.delete('/user_projects/:project_id', (req, res) => {
+  const { project_id } = req.params;
+
+  const query = 'DELETE FROM user_projects WHERE project_id = ?';
+  pool.query(query, [project_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Project data not found' });
+    } else {
+      res.status(200).json({ message: 'Project Data deleted successfully' });
+    }
+  });
+});
+
 // ----- User Achievements CRUD Operations -----
 
 // Create a new achievement entry for a user
@@ -335,6 +384,22 @@ app.get('/user_achievements', (req, res) => {
       res.status(500).json({ error: err });
     } else {
       res.status(200).json(results);
+    }
+  });
+});
+
+// Delete user's Achievement 
+app.delete('/user_achievements/:achievement_id', (req, res) => {
+  const { achievement_id } = req.params;
+
+  const query = 'DELETE FROM user_achievements WHERE achievement_id = ?';
+  pool.query(query, [achievement_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Achievement data not found' });
+    } else {
+      res.status(200).json({ message: 'Achievement Data deleted successfully' });
     }
   });
 });
