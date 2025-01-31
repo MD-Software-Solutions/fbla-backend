@@ -174,6 +174,7 @@ app.post('/job_postings', (req, res) => {
                  VALUES (?, ?, ?, ?, ?, ?, ?)`;
   pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar], (err, result) => {
     if (err) {
+      console.log(err)
       res.status(500).json({ error: err });
     } else {
       res.status(201).json({ message: 'Job posting created successfully' });
