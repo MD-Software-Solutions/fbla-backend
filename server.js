@@ -2,7 +2,8 @@
 const express = require('express');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
-const cors = require('cors');  // Import CORS module
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
 const OpenAI = require('openai'); // Import OpenAI directly
@@ -69,43 +70,6 @@ pool.getConnection((err, connection) => {
     connection.release();
   }
 });
-
-app.get('/sign-in', async (req, res) => {
-  const { username, password } = req.query; 
-  console.log(username, password);
-  const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
-  const verify = async (pword) => {
-    console.log(pword)
-    const isMatch = await bcrypt.compare(password, pword);
-    console.log(isMatch);
-    if (isMatch) {
-      console.log("You did it papi")
-      res.status(200).json("Its all good")
-    }
-  }
-  pool.query(query, (err, results) => {
-    if (err || results.length === 0) {
-      res.status(500).json({error: err})
-
-    }
-    else if (results.length > 0) {
-      verify(results[0]["password_hash"]);
-    }
-  })
-});
-
-app.get('/get-user', async (req, res) => {
-  const { username } = req.query;
-  const query = `SELECT * FROM users WHERE account_username = '${username}';`
-  pool.query(query, (err, results) => {
-    if (err || results.length === 0) {
-      res.status(500).json("No username")
-    } else {
-      res.status(200).json(results)
-    }
-  })
-});
-
 
 
 
@@ -206,10 +170,14 @@ app.post('/job_postings', (req, res) => {
       console.log(err)
       res.status(500).json({ error: err });
     } else {
-      res.status(201).json({ message: 'Job posting created successfully' });
+      res.status(201).json({ 
+        message: 'Job posting created successfully',
+        jobId: result.insertId  // MySQL automatically provides the new ID in result.insertId
+      });
     }
   });
 });
+
 
 // Get all job postings
 app.get('/job_postings', (req, res) => {
@@ -488,6 +456,75 @@ app.get('/job_posting_tags', (req, res) => {
     }
   });
 });
+
+// Create a new application
+app.post('/applications', (req, res) => {
+  const { job_id, user_id, why_interested, relevant_skills, hope_to_gain } = req.body;
+
+  // Debug log
+  console.log('Received application data:', req.body);
+
+  const query = `INSERT INTO job_applications (job_id, user_id, why_interested, relevant_skills, hope_to_gain) 
+                 VALUES (?, ?, ?, ?, ?)`;
+
+  pool.query(query, [job_id, user_id, why_interested, relevant_skills, hope_to_gain], (err, result) => {
+    if (err) {
+      console.error('Database error:', err); // Add this line
+      res.status(500).json({ error: err.message }); // Send error message instead of full error
+    } else {
+      res.status(201).json({ 
+        message: 'Application submitted successfully',
+        applicationId: result.insertId
+      });
+    }
+  });
+});
+
+
+// Get all applications for a job
+app.get('/applications/job/:jobId', (req, res) => {
+  const jobId = req.params.jobId;
+  const query = 'SELECT * FROM job_applications WHERE job_id = ?';
+
+  pool.query(query, [jobId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+// Get all applications for a user
+app.get('/applications/user/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const query = 'SELECT * FROM job_applications WHERE user_id = ?';
+
+  pool.query(query, [userId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+// Delete an application
+app.delete('/applications/:applicationId', (req, res) => {
+  const applicationId = req.params.applicationId;
+  const query = 'DELETE FROM job_applications WHERE application_id = ?';
+
+  pool.query(query, [applicationId], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Application not found' });
+    } else {
+      res.status(200).json({ message: 'Application deleted successfully' });
+    }
+  });
+});
+
 
 // Starting the server
 app.listen(port, () => {
