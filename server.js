@@ -2,10 +2,13 @@
 const express = require('express');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
+const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
+require('dotenv').config();
+// const cors = require('cors');  // Import CORS module
 const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
+// const dotenv = require('dotenv');
 const OpenAI = require('openai'); // Import OpenAI directly
 
 
@@ -69,6 +72,122 @@ pool.getConnection((err, connection) => {
     console.log('Connected to the database.');
     connection.release();
   }
+});
+
+app.post('/sign-in', async (req, res) => {
+  console.log(req.body);
+  const { username, password } = req.body; // Changed from req.query to req.body for security
+  
+  const query = `SELECT * FROM users WHERE account_username = ?`; // Using parameterized query for security
+  
+  const verify = async (user, pword) => {
+    try {
+      const isMatch = await bcrypt.compare(password, pword);
+      
+      if (isMatch) {
+        // Create JWT token
+        const token = jwt.sign(
+          { 
+            userId: user.id,
+            username: user.account_username
+            // Add any other user data you want to include
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '24h' } // Token expires in 24 hours
+        );
+
+        res.status(200).json({
+          message: "Login successful",
+          token,
+          user: {
+            username: user.account_username,
+            // Add other user data you want to send to frontend
+          }
+        });
+      } else {
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
+    }
+  };
+
+  pool.query(query, [username], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+    
+    verify(results[0], results[0]["password_hash"]);
+  });
+});
+
+// app.get('/sign-in', async (req, res) => {
+//   const { username, password } = req.query; 
+//   console.log(username, password);
+//   const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
+//   const verify = async (pword) => {
+//     console.log(pword)
+//     const isMatch = await bcrypt.compare(password, pword);
+//     console.log(isMatch);
+//     if (isMatch) {
+//       console.log("You did it papi")
+//       res.status(200).json("Its all good")
+//     } else if (!isMatch) {
+//       res.status(500).json({error: "Sign-in failed"})
+//     }
+//   }
+//   pool.query(query, (err, results) => {
+//     if (err || results.length === 0) {
+//       res.status(500).json({error: err})
+
+//     }
+//     else if (results.length > 0) {
+//       verify(results[0]["password_hash"]);
+//     }
+//   })
+// });
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified;
+    next();
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
+  }
+};
+
+app.get('/get-user', authenticateToken, async (req, res) => {
+  const { username } = req.query;
+  const query = 'SELECT * FROM users WHERE account_username = ?';
+  
+  pool.query(query, [username], (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json("No username")
+    } else {
+      res.status(200).json(results)
+    }
+  });
+});
+
+app.get('/get-user/:id', (req, res) => {
+  const userId = req.params.id;
+  const query = 'SELECT * FROM users WHERE user_id = ?';
+
+  pool.query(query, [userId], (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json("No user found")
+    } else {
+      res.status(200).json(results[0])
+    }
+  });
 });
 
 
