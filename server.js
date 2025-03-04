@@ -7,6 +7,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const OpenAI = require('openai'); // Import OpenAI directly
+const dotenv = require('dotenv');
 
 
 // Create an express app
