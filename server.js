@@ -6,9 +6,6 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
-// const cors = require('cors');  // Import CORS module
-const bodyParser = require('body-parser');
-// const dotenv = require('dotenv');
 const OpenAI = require('openai'); // Import OpenAI directly
 
 
