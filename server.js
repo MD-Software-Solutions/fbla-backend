@@ -3,7 +3,8 @@ const express = require('express');
 const mysql = require('mysql2');
 const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
-const cors = require('cors');  // Import CORS module
+const cors = require('cors');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 
@@ -41,42 +42,121 @@ pool.getConnection((err, connection) => {
   }
 });
 
-app.get('/sign-in', async (req, res) => {
-  const { username, password } = req.query; 
-  console.log(username, password);
-  const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
-  const verify = async (pword) => {
-    console.log(pword)
-    const isMatch = await bcrypt.compare(password, pword);
-    console.log(isMatch);
-    if (isMatch) {
-      console.log("You did it papi")
-      res.status(200).json("Its all good")
-    }
-  }
-  pool.query(query, (err, results) => {
-    if (err || results.length === 0) {
-      res.status(500).json({error: err})
+app.post('/sign-in', async (req, res) => {
+  console.log(req.body);
+  const { username, password } = req.body; // Changed from req.query to req.body for security
+  
+  const query = `SELECT * FROM users WHERE account_username = ?`; // Using parameterized query for security
+  
+  const verify = async (user, pword) => {
+    try {
+      const isMatch = await bcrypt.compare(password, pword);
+      
+      if (isMatch) {
+        // Create JWT token
+        const token = jwt.sign(
+          { 
+            userId: user.id,
+            username: user.account_username
+            // Add any other user data you want to include
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: '24h' } // Token expires in 24 hours
+        );
 
+        res.status(200).json({
+          message: "Login successful",
+          token,
+          user: {
+            username: user.account_username,
+            // Add other user data you want to send to frontend
+          }
+        });
+      } else {
+        res.status(401).json({ error: "Invalid credentials" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Server error" });
     }
-    else if (results.length > 0) {
-      verify(results[0]["password_hash"]);
+  };
+
+  pool.query(query, [username], (err, results) => {
+    if (err || results.length === 0) {
+      return res.status(401).json({ error: "Invalid credentials" });
     }
-  })
+    
+    verify(results[0], results[0]["password_hash"]);
+  });
 });
 
-app.get('/get-user', async (req, res) => {
+// app.get('/sign-in', async (req, res) => {
+//   const { username, password } = req.query; 
+//   console.log(username, password);
+//   const query = `SELECT password_hash FROM users WHERE account_username = '${username}'`;
+//   const verify = async (pword) => {
+//     console.log(pword)
+//     const isMatch = await bcrypt.compare(password, pword);
+//     console.log(isMatch);
+//     if (isMatch) {
+//       console.log("You did it papi")
+//       res.status(200).json("Its all good")
+//     } else if (!isMatch) {
+//       res.status(500).json({error: "Sign-in failed"})
+//     }
+//   }
+//   pool.query(query, (err, results) => {
+//     if (err || results.length === 0) {
+//       res.status(500).json({error: err})
+
+//     }
+//     else if (results.length > 0) {
+//       verify(results[0]["password_hash"]);
+//     }
+//   })
+// });
+
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Access denied. No token provided." });
+  }
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified;
+    next();
+  } catch (err) {
+    res.status(403).json({ error: "Invalid token" });
+  }
+};
+
+app.get('/get-user', authenticateToken, async (req, res) => {
   const { username } = req.query;
-  const query = `SELECT * FROM users WHERE account_username = '${username}';`
-  pool.query(query, (err, results) => {
+  const query = 'SELECT * FROM users WHERE account_username = ?';
+  
+  pool.query(query, [username], (err, results) => {
     if (err || results.length === 0) {
       res.status(500).json("No username")
     } else {
       res.status(200).json(results)
     }
-  })
+  });
 });
 
+app.get('/get-user/:id', (req, res) => {
+  const userId = req.params.id;
+  const query = 'SELECT * FROM users WHERE user_id = ?';
+
+  pool.query(query, [userId], (err, results) => {
+    if (err || results.length === 0) {
+      res.status(500).json("No user found")
+    } else {
+      res.status(200).json(results[0])
+    }
+  });
+});
 
 
 
@@ -177,10 +257,14 @@ app.post('/job_postings', (req, res) => {
       console.log(err)
       res.status(500).json({ error: err });
     } else {
-      res.status(201).json({ message: 'Job posting created successfully' });
+      res.status(201).json({ 
+        message: 'Job posting created successfully',
+        jobId: result.insertId  // MySQL automatically provides the new ID in result.insertId
+      });
     }
   });
 });
+
 
 // Get all job postings
 app.get('/job_postings', (req, res) => {
@@ -459,6 +543,75 @@ app.get('/job_posting_tags', (req, res) => {
     }
   });
 });
+
+// Create a new application
+app.post('/applications', (req, res) => {
+  const { job_id, user_id, why_interested, relevant_skills, hope_to_gain } = req.body;
+
+  // Debug log
+  console.log('Received application data:', req.body);
+
+  const query = `INSERT INTO job_applications (job_id, user_id, why_interested, relevant_skills, hope_to_gain) 
+                 VALUES (?, ?, ?, ?, ?)`;
+
+  pool.query(query, [job_id, user_id, why_interested, relevant_skills, hope_to_gain], (err, result) => {
+    if (err) {
+      console.error('Database error:', err); // Add this line
+      res.status(500).json({ error: err.message }); // Send error message instead of full error
+    } else {
+      res.status(201).json({ 
+        message: 'Application submitted successfully',
+        applicationId: result.insertId
+      });
+    }
+  });
+});
+
+
+// Get all applications for a job
+app.get('/applications/job/:jobId', (req, res) => {
+  const jobId = req.params.jobId;
+  const query = 'SELECT * FROM job_applications WHERE job_id = ?';
+
+  pool.query(query, [jobId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+// Get all applications for a user
+app.get('/applications/user/:userId', (req, res) => {
+  const userId = req.params.userId;
+  const query = 'SELECT * FROM job_applications WHERE user_id = ?';
+
+  pool.query(query, [userId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+// Delete an application
+app.delete('/applications/:applicationId', (req, res) => {
+  const applicationId = req.params.applicationId;
+  const query = 'DELETE FROM job_applications WHERE application_id = ?';
+
+  pool.query(query, [applicationId], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Application not found' });
+    } else {
+      res.status(200).json({ message: 'Application deleted successfully' });
+    }
+  });
+});
+
 
 // Starting the server
 app.listen(port, () => {
