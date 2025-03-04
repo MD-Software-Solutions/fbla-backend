@@ -6,19 +6,51 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+// const cors = require('cors');  // Import CORS module
+const bodyParser = require('body-parser');
+// const dotenv = require('dotenv');
+const OpenAI = require('openai'); // Import OpenAI directly
 
 
 // Create an express app
 const app = express();
 const port = 4000;
 
+dotenv.config();
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'], 
+}));
 
-
-
-// Middleware to parse JSON data
 app.use(bodyParser.json());
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+app.post('/generate-bio', async (req, res) => {
+  try {
+    const { userInput } = req.body;
+
+    if (!userInput) {
+      return res.status(400).json({ error: 'User input is required' });
+    }
+
+    const completion = await openai.completions.create({
+      model: 'gpt-3.5-turbo-instruct',
+      prompt: `Generate a professional bio for a job hiring website, less than 150 tokens, based on: ${userInput}`,
+      max_tokens: 150,
+    });
+
+    const bio = completion.choices[0].text.trim();
+    res.json({ bio });
+  } catch (error) {
+    console.error('OpenAI Error:', error);
+    res.status(500).json({ error: 'Failed to generate bio', details: error.message });
+  }
+});
 
 // MySQL connection to AWS RDS
 const pool = mysql.createPool({
