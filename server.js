@@ -16,11 +16,7 @@ const port = 4000;
 
 dotenv.config();
 
-app.use(cors({
-  origin: 'http://localhost:3001',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'], 
-}));
+app.use(cors());
 
 app.use(bodyParser.json());
 
@@ -47,6 +43,40 @@ app.post('/generate-bio', async (req, res) => {
   } catch (error) {
     console.error('OpenAI Error:', error);
     res.status(500).json({ error: 'Failed to generate bio', details: error.message });
+  }
+});
+
+app.post('/generate-filter', async (req, res) => {
+  try {
+    const { jobPosts, users } = req.body;
+
+    if (!jobPosts || !users) {
+      return res.status(400).json({ error: 'Job posts and users are required' });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI assistant that filters job postings based on relevance. Besure to have your response in a paragraph (NOT LIST) and be sure to make clear for the user of what the job you recommend is and why. Must atleast include the job title (eg. the job title is 'job-title'), poster name, skill they asked for, and how it lines up to the user's skills. Finally, DO NOT LIST ANY userid, that is a security risk."
+        },
+        {
+          role: "user",
+          content: `Here are job postings and user data. Suggest relevant jobs:\n\n` +
+                   `Job Posts: ${JSON.stringify(jobPosts)}\n` +
+                   `Users: ${JSON.stringify(users)}`
+        }
+      ],
+      max_tokens: 150,
+    });
+
+    const filteredJobs = completion.choices[0].message.content.trim();
+    res.json({ filteredJobs }); // ✅ Return correct response
+
+  } catch (error) {
+    console.error('OpenAI Error:', error);
+    res.status(500).json({ error: 'Failed to generate job recommendations', details: error.message });
   }
 });
 
