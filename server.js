@@ -755,13 +755,22 @@ app.get('/job_postings/pending', (req, res) => {
 
 app.put('/job_postings/:job_id/toggle-approval', (req, res) => {
   const { job_id } = req.params;
+  const { isApproved } = req.body; 
   
+  // Validate the input
+  if (typeof isApproved !== 'boolean') {
+    return res.status(400).json({ 
+      error: 'Invalid input', 
+      message: 'isApproved must be a boolean value' 
+    });
+  }
+
   const query = `
     UPDATE job_postings 
-    SET isApproved = NOT isApproved 
+    SET isApproved = ?
     WHERE job_id = ?`;
 
-  pool.query(query, [job_id], (err, result) => {
+  pool.query(query, [isApproved, job_id], (err, result) => {
     if (err) {
       res.status(500).json({ error: err });
     } else if (result.affectedRows === 0) {
