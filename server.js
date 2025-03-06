@@ -731,6 +731,80 @@ app.get('/applications/:applicationId', (req, res) => {
   });
 });
 
+app.get('/job_postings/approved', (req, res) => {
+  const query = 'SELECT * FROM job_postings WHERE isApproved = true';
+  pool.query(query, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+app.get('/job_postings/pending', (req, res) => {
+  const query = 'SELECT * FROM job_postings WHERE isApproved = false';
+  pool.query(query, (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else {
+      res.status(200).json(results);
+    }
+  });
+});
+
+app.put('/job_postings/:job_id/toggle-approval', (req, res) => {
+  const { job_id } = req.params;
+  
+  const query = `
+    UPDATE job_postings 
+    SET isApproved = NOT isApproved 
+    WHERE job_id = ?`;
+
+  pool.query(query, [job_id], (err, result) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ message: 'Job posting not found' });
+    } else {
+      pool.query('SELECT isApproved FROM job_postings WHERE job_id = ?', [job_id], (err, results) => {
+        if (err) {
+          res.status(500).json({ error: err });
+        } else {
+          res.status(200).json({
+            message: 'Approval status updated successfully',
+            job_id: job_id,
+            new_status: results[0].isApproved
+          });
+        }
+      });
+    }
+  });
+});
+
+app.get('/users/:user_id/admin-status', (req, res) => {
+  const userId = req.params.user_id;
+  const query = 'SELECT isAdmin FROM users WHERE user_id = ?';
+
+  pool.query(query, [userId], (err, results) => {
+    if (err) {
+      res.status(500).json({ 
+        error: 'Database error', 
+        details: err.message 
+      });
+    } else if (results.length === 0) {
+      res.status(404).json({ 
+        error: 'User not found' 
+      });
+    } else {
+      res.status(200).json({
+        user_id: userId,
+        isAdmin: results[0].isAdmin === 1
+      });
+    }
+  });
+});
+
 
 
 // Starting the server
