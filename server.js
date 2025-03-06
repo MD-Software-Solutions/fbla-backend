@@ -5,16 +5,19 @@ const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
-const OpenAI = require('openai'); // Import OpenAI directly
 const dotenv = require('dotenv');
+
+// const cors = require('cors');  // Import CORS module
+// const bodyParser = require('body-parser');
+// const dotenv = require('dotenv');
+const OpenAI = require('openai'); // Import OpenAI directly
 
 
 // Create an express app
 const app = express();
 const port = 4000;
+dotenv.config()
 
-dotenv.config();
 
 app.use(cors());
 
@@ -671,6 +674,63 @@ app.delete('/applications/:applicationId', (req, res) => {
     }
   });
 });
+
+// Update application status, feedback, and completion status
+app.put('/applications/:applicationId/status', (req, res) => {
+  const { applicationId } = req.params;
+  const { application_status, review_feedback, isComplete } = req.body;
+
+  const query = `
+    UPDATE job_applications 
+    SET 
+      application_status = ?,
+      review_feedback = ?,
+      isComplete = ?
+    WHERE application_id = ?`;
+
+  pool.query(
+    query, 
+    [application_status, review_feedback, isComplete, applicationId], 
+    (err, result) => {
+      if (err) {
+        console.error('Update error:', err);
+        res.status(500).json({ 
+          error: 'Failed to update application status',
+          details: err.message 
+        });
+      } else if (result.affectedRows === 0) {
+        res.status(404).json({ 
+          message: 'Application not found' 
+        });
+      } else {
+        res.status(200).json({ 
+          message: 'Application updated successfully',
+          updatedFields: {
+            application_status,
+            review_feedback,
+            isComplete
+          }
+        });
+      }
+    }
+  );
+});
+
+app.get('/applications/:applicationId', (req, res) => {
+  const { applicationId } = req.params;
+  const query = 'SELECT * FROM job_applications WHERE application_id = ?';
+
+  pool.query(query, [applicationId], (err, results) => {
+    if (err) {
+      res.status(500).json({ error: err });
+    } else if (results.length === 0) {
+      res.status(404).json({ message: 'Application not found' });
+    } else {
+      res.status(200).json(results[0]);
+    }
+  });
+});
+
 
 
 // Starting the server
