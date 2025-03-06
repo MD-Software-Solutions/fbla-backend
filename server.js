@@ -756,7 +756,6 @@ app.put('/job_postings/:job_id/toggle-approval', (req, res) => {
   });
 });
 
-
 app.get('/users/:user_id/admin-status', (req, res) => {
   const userId = req.params.user_id;
   const query = 'SELECT isAdmin FROM users WHERE user_id = ?';
