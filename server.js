@@ -187,7 +187,6 @@ app.get('/get-user/:id', (req, res) => {
 });
 
 
-
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
     const query = 'SELECT account_username, password_hash FROM users';
@@ -367,9 +366,8 @@ app.get('/user_history', (req, res) => {
   });
 });
 
-// Delete user's History 
 app.delete('/user_history/:history_id', (req, res) => {
-  const { job_id } = req.params;
+  const { history_id } = req.params;  // Fixed: now correctly getting history_id
 
   const query = 'DELETE FROM user_history WHERE history_id = ?';
   pool.query(query, [history_id], (err, result) => {
@@ -382,6 +380,7 @@ app.delete('/user_history/:history_id', (req, res) => {
     }
   });
 });
+
 
 
 // ----- User Skills CRUD Operations -----
