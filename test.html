@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Khang</title>
+    </head>
+    <body>
+        <script>
+            const apiUrl = 'https://skillbridge-fbla-server.onrender.com';
+
+            // Function to fetch and display users
+            function getUsers() {
+                fetch(`${apiUrl}/users`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        const output_tag = document.querySelector('.output');
+                        // Pretty print the JSON response
+                        output_tag.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                        console.log(data);
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+            }
+
+            // Function to create a new user
+            function createUser() {
+                const userData = {
+                    real_name: "John Doe",
+                    personal_email: "john.doe@example.com",
+                    phone_number: "123-456-7890",
+                    birth_date: "2000-01-01",
+                    school_name: "Example High School",
+                    school_district: "Example District",
+                    school_email: "john.doe@school.com",
+                    account_username: "johnny123",
+                    password: "password123",
+                    is_teacher: false,
+                    city: "Example City",
+                    state: "Example State",
+                    bio: "This is a sample bio",
+                    profile_img_url: "http://example.com/profile.jpg",
+                    avatar_name: "avatar.jpg"
+                };
+
+                fetch(`${apiUrl}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(userData), // Send the data as a JSON string
+                })
+                .then(response => response.json())  // Parse the JSON response
+                .then(result => {
+                    const output_tag = document.querySelector('.output');
+                    if (result.message) {
+                        output_tag.innerHTML = `<p>${result.message}</p>`;  // Display success message
+                    } else {
+                        output_tag.innerHTML = `<p>Something went wrong while creating the user.</p>`;
+                    }
+                    console.log(result);
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    const output_tag = document.querySelector('.output');
+                    output_tag.innerHTML = `<p>Error occurred while creating the user.</p>`;
+                });
+            }
+
+            // Call getUsers to display users initially
+            getUsers();
+
+            // You can call createUser when needed, for example, upon a button click
+            // For demonstration purposes, I'm calling createUser directly after getUsers
+
+        </script>
+
+        <p class="output"></p>
+
+    </body>
+</html>
