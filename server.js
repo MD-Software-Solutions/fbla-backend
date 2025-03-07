@@ -5,7 +5,8 @@ const bcrypt = require('bcryptjs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-require('dotenv').config();
+const dotenv = require('dotenv');
+
 // const cors = require('cors');  // Import CORS module
 // const bodyParser = require('body-parser');
 // const dotenv = require('dotenv');
@@ -15,8 +16,8 @@ const OpenAI = require('openai'); // Import OpenAI directly
 // Create an express app
 const app = express();
 const port = 4000;
+dotenv.config()
 
-// dotenv.config();
 
 app.use(cors());
 
@@ -48,6 +49,40 @@ app.post('/generate-bio', async (req, res) => {
   }
 });
 
+app.post('/generate-filter', async (req, res) => {
+  try {
+    const { jobPosts, users } = req.body;
+
+    if (!jobPosts || !users) {
+      return res.status(400).json({ error: 'Job posts and users are required' });
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: "You are an AI assistant that filters job postings based on relevance. Besure to have your response in a paragraph (NOT LIST) and be sure to make clear for the user of what the job you recommend is and why. Must atleast include the job title (eg. the job title is 'job-title'), poster name, skill they asked for, and how it lines up to the user's skills. Finally, DO NOT LIST ANY userid, that is a security risk."
+        },
+        {
+          role: "user",
+          content: `Here are job postings and user data. Suggest relevant jobs:\n\n` +
+                   `Job Posts: ${JSON.stringify(jobPosts)}\n` +
+                   `Users: ${JSON.stringify(users)}`
+        }
+      ],
+      max_tokens: 150,
+    });
+
+    const filteredJobs = completion.choices[0].message.content.trim();
+    res.json({ filteredJobs }); // ✅ Return correct response
+
+  } catch (error) {
+    console.error('OpenAI Error:', error);
+    res.status(500).json({ error: 'Failed to generate job recommendations', details: error.message });
+  }
+});
+
 // MySQL connection to AWS RDS
 const pool = mysql.createPool({
     host: process.env.DB_HOST, 
@@ -71,7 +106,7 @@ pool.getConnection((err, connection) => {
 });
 
 app.post('/sign-in', async (req, res) => {
-  console.log(req.body);
+  // console.log(req.body);
   const { username, password } = req.body; // Changed from req.query to req.body for security
   
   const query = `SELECT * FROM users WHERE account_username = ?`; // Using parameterized query for security
@@ -187,7 +222,6 @@ app.get('/get-user/:id', (req, res) => {
 });
 
 
-
 // Get all users' usernames and passwords
 app.get('/users/usernames-passwords', (req, res) => {
     const query = 'SELECT account_username, password_hash FROM users';
@@ -282,7 +316,7 @@ app.post('/job_postings', (req, res) => {
                  VALUES (?, ?, ?, ?, ?, ?, ?)`;
   pool.query(query, [user_id, job_title, job_description, job_signup_form, job_type_tag, industry_tag, user_avatar], (err, result) => {
     if (err) {
-      console.log(err)
+      // console.log(err)
       res.status(500).json({ error: err });
     } else {
       res.status(201).json({ 
@@ -367,9 +401,8 @@ app.get('/user_history', (req, res) => {
   });
 });
 
-// Delete user's History 
 app.delete('/user_history/:history_id', (req, res) => {
-  const { job_id } = req.params;
+  const { history_id } = req.params;  // Fixed: now correctly getting history_id
 
   const query = 'DELETE FROM user_history WHERE history_id = ?';
   pool.query(query, [history_id], (err, result) => {
@@ -382,6 +415,7 @@ app.delete('/user_history/:history_id', (req, res) => {
     }
   });
 });
+
 
 
 // ----- User Skills CRUD Operations -----
@@ -577,7 +611,7 @@ app.post('/applications', (req, res) => {
   const { job_id, user_id, why_interested, relevant_skills, hope_to_gain } = req.body;
 
   // Debug log
-  console.log('Received application data:', req.body);
+  // console.log('Received application data:', req.body);
 
   const query = `INSERT INTO job_applications (job_id, user_id, why_interested, relevant_skills, hope_to_gain) 
                  VALUES (?, ?, ?, ?, ?)`;
@@ -776,6 +810,50 @@ app.get('/users/:user_id/admin-status', (req, res) => {
         isAdmin: results[0].isAdmin === 1
       });
     }
+  });
+});
+
+app.get('/users/:user_id/job-posts/count', (req, res) => {
+  const { user_id } = req.params;
+
+  // Simple input validation
+  if (!user_id || isNaN(user_id)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+
+  const query = 'SELECT COUNT(*) as post_count FROM job_postings WHERE user_id = ?';
+  
+  pool.query(query, [user_id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to retrieve count' });
+    }
+    
+    res.status(200).json({
+      user_id: parseInt(user_id),
+      total_posts: results[0].post_count
+    });
+  });
+});
+
+app.get('/users/:user_id/projects/count', (req, res) => {
+  const { user_id } = req.params;
+
+  // Simple input validation
+  if (!user_id || isNaN(user_id)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+
+  const query = 'SELECT COUNT(*) as project_count FROM user_projects WHERE user_id = ?';
+  
+  pool.query(query, [user_id], (err, results) => {
+    if (err) {
+      return res.status(500).json({ error: 'Failed to retrieve count' });
+    }
+    
+    res.status(200).json({
+      user_id: parseInt(user_id),
+      total_projects: results[0].project_count
+    });
   });
 });
 
